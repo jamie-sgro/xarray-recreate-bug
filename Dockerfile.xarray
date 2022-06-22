@@ -1,13 +1,15 @@
-FROM python:3.9 AS base
+FROM osgeo/gdal as base
 
 WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y \
     python3-pip \
-    && pip install --upgrade xarray==0.18.2
+    && pip install --upgrade xarray==0.18.2 \
+    && pip install --no-cache-dir rasterio==1.2.10 --no-binary rasterio --no-deps
 
-COPY data/MOD13A2.A2020081.h18v08.006.2020100121033.hdf data/MOD13A2.A2020081.h18v08.006.2020100121033.hdf
+
+COPY data/ data/
 COPY tests/ tests/
 
 ENTRYPOINT [ "tail", "-f", "/dev/null" ]
