@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  python:
+    container_name: xarray-recreate-bug
+    image: xarray-recreate-bug:latest
+    build:
+      context: ./
+      dockerfile: Dockerfile.xarray
+    entrypoint: [ "tail", "-f", "/dev/null" ]

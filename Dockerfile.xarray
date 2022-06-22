@@ -1,0 +1,15 @@
+FROM osgeo/gdal as base
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y \
+    python3-pip \
+    && pip install --upgrade xarray==0.18.2 \
+    && pip install --no-cache-dir rasterio==1.2.10 --no-binary rasterio --no-deps \
+    && pip install pytest
+
+COPY data/ data/
+COPY tests/ tests/
+
+ENTRYPOINT [ "tail", "-f", "/dev/null" ]
