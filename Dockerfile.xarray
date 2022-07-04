@@ -1,12 +1,52 @@
-FROM osgeo/gdal as base
-
+FROM python:3.9 AS base
 WORKDIR /app
+ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 
-RUN apt-get update \
-    && apt-get install -y \
+RUN apt-get update && \
+    apt-get install -y \
     python3-pip \
-    && pip install --upgrade xarray==0.18.2 \
-    && pip install --no-cache-dir rasterio==1.2.10 --no-binary rasterio --no-deps \
+    locales \
+    python3-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/* \
+    # Ensure locales configured correctly
+    # This is required to ensure the geodata is encoded and read based on a uniform
+    # location and language standard
+    && sed -i -e "s/# en_GB.UTF-8.*/en_GB.UTF-8 UTF-8/" /etc/locale.gen \
+    && dpkg-reconfigure --frontend=noninteractive locales \
+    && update-locale LC_ALL='en_GB.UTF-8' \
+    # add a connection to the testing GDAL repo which has version 3.4.2, while
+    # stable hosts up to 3.2.2
+    && echo 'deb http://httpredir.debian.org/debian testing main contrib non-free' >> /etc/apt/sources.list \
+    && echo 'Package: *\nPin: release a=testing\nPin-Priority: -2' >> /etc/apt/preferences \
+    && apt-get update \
+    && apt-get -t testing install -y --no-install-recommends libgdal-dev \
+    # There is a known symlinking issue for the ogdi library. This corrects it.
+    && ln -s /usr/lib/ogdi/libvrf.so /usr/lib \
+    && rm -rf /var/lib/apt/lists/* \
+    # Remove testing package paths after this installation
+    && sed -i '$d' /etc/apt/sources.list \
+    # Set python aliases for python3
+    && echo "alias python=python3" >> ~/.bashrc \
+    && echo "alias pip=pip3" >> ~/.bashrc
+
+# configure locales to correctly read geodata
+ENV LANG en_GB.UTF-8
+ENV LANGUAGE en_GB.UTF-8
+ENV LC_ALL en_GB.UTF-8
+# Update C env vars so compiler can find gdal
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+FROM base AS dependencies
+
+RUN pip3 install --no-cache-dir GDAL==3.4.2 \
+    # Needed to ensure rasterio uses the system GDAL rather than it's mini
+    # version. This is not required for local M1 docker builds as of 03/16/2022,
+    # but fails in ci/cd
+    && pip3 install rasterio==1.2.10 --no-binary rasterio \
+    && pip3 install --upgrade xarray==0.18.2 \
+    && pip3 install rioxarray \
     && pip install pytest
 
 COPY data/ data/

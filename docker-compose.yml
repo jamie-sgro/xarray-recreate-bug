@@ -4,7 +4,6 @@ services:
   python:
     container_name: xarray-recreate-bug
     image: xarray-recreate-bug:latest
-    build:
-      context: ./
-      dockerfile: Dockerfile.xarray
+    volumes:
+      - ./tests:/app/tests
     entrypoint: [ "tail", "-f", "/dev/null" ]
